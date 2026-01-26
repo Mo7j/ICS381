@@ -50,11 +50,21 @@ if __name__ == "__main__":
     from gridproblem import *
     from search_algorithms import *
     
-    gp1 = NxNGridProblem(initial_state=(0,0), goal_state=(2,2), N=3)
+    gp1 = NxNGridProblem(initial_state=(3,3), goal_state=(7,7), N=8)
     
     # get some statistics on generated nodes, popped nodes, solution
-    searchers = [(lambda p: uniform_cost_search(p, treelike=False)), 
-                 (lambda p: uniform_cost_search(p, treelike=True))]
-    searcher_names= ['Graph-like UCS', 'Tree-like UCS']
+    searchers = [(lambda p: breadth_first_search(p, treelike=False)), 
+                 (lambda p: breadth_first_search(p, treelike=True)), 
+                 (lambda p: depth_first_search(p, treelike=False)),
+                 (lambda p: uniform_cost_search(p, treelike=False)), 
+                 (lambda p: uniform_cost_search(p, treelike=True)),
+                 (lambda p: greedy_search(p, p.h, treelike=False)), 
+                 (lambda p: astar_search(p, p.h, treelike=False)), 
+                 (lambda p: astar_search(p, p.h, treelike=True))]
+    searcher_names= ['Graph-like BFS', 'Tree-like BFS', 
+                     'Graph-like DFS',
+                     'Graph-like UCS', 'Tree-like UCS', 
+                     'Graph-like Greedy',
+                     'Graph-like A*', 'Tree-like A*']
     
     run_profiler_searches(gp1, searchers, searcher_names)

@@ -24,22 +24,6 @@ class NxNGridProblem:
     def result(self, state, action):
         row, col = state
         
-        # just safe-gaurd against illegal moves.
-        # agent stays in place.
-        if action == 'down' and row == (self.N - 1):
-            new_state = (row, col)
-            return new_state
-        elif action == 'up' and row == 0:
-            new_state = (row, col)
-            return new_state
-        elif action == 'right' and col == (self.N - 1):
-            new_state = (row, col)
-            return new_state
-        elif action == 'left' and col == 0:
-            new_state = (row, col)
-            return new_state
-        
-        # TODO: finish remainder implementation for movement
         if action == 'up':
             new_state = (row-1, col)
         elif action == 'down':
@@ -55,10 +39,22 @@ class NxNGridProblem:
         row, col = state
         goal_row, goal_col = self.goal_state
         
-        # TODO: finish remainder implementation for goal boolean condition
         goal_condition = (row == goal_row) and (col == goal_col)
         
         return goal_condition
         
     def action_cost(self, state1, action, state2):
         return 1
+        
+    """
+        Compute euclidean distance from node.state to goal.
+    """
+    def h(self, node):
+        if self.is_goal(node.state):
+            return 0
+            
+        arow, acol = node.state
+        grow, gcol = self.goal_state
+        edist = abs(arow - grow) + abs(acol - gcol)
+
+        return edist

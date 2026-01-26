@@ -117,7 +117,15 @@ def depth_first_search(problem, treelike=False):
         return best_first_search(problem, f=dfs_f)
 
 def greedy_search(problem, h, treelike=False):
-    pass
+    greedy_f = (lambda node: h(node))
+    if treelike:
+        return best_first_search_treelike(problem, f=greedy_f)
+    else:
+        return best_first_search(problem, f=greedy_f)
 
 def astar_search(problem, h, treelike=False):
-    pass
+    astar_f = (lambda node: node.path_cost + h(node))
+    if treelike:
+        return best_first_search_treelike(problem, f=astar_f)
+    else:
+        return best_first_search(problem, f=astar_f)
