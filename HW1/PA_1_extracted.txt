@@ -1,0 +1,379 @@
+pages 15
+
+===== PAGE 1 =====
+
+PA1 – Moayad Alnammi © 2026   1/15 
+ICS 381: Principles of AI 
+PA 1 – Programming Instructions 
+ 
+ 
+General Helpful Tips:  
+ 
+• You can submit your code on Gradescope any time before the submission deadline. The autograder will test your code and 
+give you scores feedback on various test cases.  
+ 
+• NOTE1: For this homework, we will be using numpy for random sampling. So, you can import numpy. 
+• NOTE2: You can import copy for the deepcopy function.  
+• NOTE3: You are not allowed to use any other external python packages; i.e. pandas, etc.  
+• NOTE4: Be sure to implement the functions as specified in this document. In addition, you can implement any extra helper 
+functions as you see fit with whatever names you like.  
+• NOTE5: You do not need to adhere to good coding standards and style (although this is recommended for your own sake). 
+The autograder just checks that your code gives the correct output (the logic is correct).  
+• NOTE6: Your code must work on the Gradescope autograder to achieve a score. Request for manual grading will not be 
+entertained.  
+• NOTE7: All tests on Gradescope’s autograder are expected to take around 140 seconds to complete. If it takes longer than 
+4 minutes, then most likely there is an infinite loop bug in your code. 
+ 
+• NOTE8: Submit the required files only: [search_problem.py, local_search.py] 
+ 
+  
+
+===== PAGE 2 =====
+
+PA1 – Moayad Alnammi © 2026   2/15 
+  
+Searching 
+
+===== PAGE 3 =====
+
+PA1 – Moayad Alnammi © 2026   3/15 
+search_problem.py: Implement GridHunterProblem Class  
+ 
+Your task is to implement a variant of the grid problem. This grid problem consists of an N-by-N grid (N rows and N columns). A 
+grid location is denoted by a tuple (𝑟𝑜𝑤, 𝑐𝑜𝑙) with domains {0, 1, … , 𝑁 − 1}. The agent starts at some grid location (𝑟𝑜𝑤𝐴, 𝑐𝑜𝑙𝐴). 
+The agent has five actions available: turn-right, turn-left, move-forward, stay, and shoot-arrow. Note that the agent cannot 
+move outside of the grid limits defined by 𝑁.  
+ 
+In this grid problem, we have monsters that move in a pattern and destroy the agent if they come into contact  (occupy the same 
+grid). The goal is for the agent to shoot all the monsters. 
+ 
+Here is more info on the monsters: 
+• There are 𝑀 monsters in total. The initial (𝑟𝑜𝑤, 𝑐𝑜𝑙) starting location of these monsters is a list monster_coords.  
+• The monsters move in a fixed pattern. A monster moves left of its initial location, then back to its initial location, then r ight of 
+its initial location, then back to its initial location, and so on. It keeps oscillating: initial, left, initial, right, in itial, left, etc. 
+• In actions() implementation, we only remove the move-forward action in the case that it leads to outside of grid bounds.  
+• The agent has health represented as an integer. If the agent comes into contact with a monster (they occupy the same grid), then 
+the agent takes 1 point of damage. If agent health <= 0, they cannot do any more actions. 
+• In the result() function, implement monster movement, agent actions, and agent damage logic. 
+• To further make the implementation memory efficient, we will use a simple trick to keep track of monster locations during the  
+search. Since the monsters move with a fixed pattern, and we have stored their initial starting locations in monster_coords, 
+then we can use an integer 𝑚𝑠𝑡𝑒𝑝 to keep track of which grid location the monsters should be in. When 𝑚𝑠𝑡𝑒𝑝= 0, the 
+monsters are at their initial locations. When 𝑚𝑠𝑡𝑒𝑝= 1, then monsters are at the left of their initial locations. When 𝑚𝑠𝑡𝑒𝑝=
+2, then monsters move back to initial locations. When 𝑚𝑠𝑡𝑒𝑝= 3, then monsters are the right of their initial locations. That is 
+all we need to represent the fixed pattern. We store this timestep as part of the state, and each time result function is called, 
+them 𝑚𝑠𝑡𝑒𝑝= (𝑚𝑠𝑡𝑒𝑝+ 1)%4 that is modulo 4.  
+• When the agent shoots, the arrow moves forward from the agent’s forward -direction. The arrow continues travelling until it 
+hits a wall. Any monster in the arrow’s path dies. Dead monsters can be ignored by the agent when moving (no damage).  
+• The goal is for the agent to shoot all 𝑴 monsters and survive. We will maintain the status of the 𝑀 monsters as Booleans in 
+the state. The status of agent being alive is also a Boolean.  
+  
+
+===== PAGE 4 =====
+
+PA1 – Moayad Alnammi © 2026   4/15 
+We will represent a state as a tuple 𝑠𝑡𝑎𝑡𝑒= (𝑟𝑜𝑤, 𝑐𝑜𝑙, 𝑓𝑜𝑟𝑤, ℎ𝑒𝑎𝑙𝑡ℎ, 𝑚𝑠𝑡𝑒𝑝, 𝑑1, 𝑑2, … , 𝑑𝑀), where: 
+• 𝑟𝑜𝑤, 𝑐𝑜𝑙 is the current agent location. Both are in the domain {0, 1, …, N-1}. 
+• 𝑓𝑜𝑟𝑤 ∈ {‘north, ‘south’, ‘east’, ‘west’} represents agent’s forward orientation. When the agent moves forward, it moves 
+in the direction of its orientation. When the agent shoots an arrow, the arrow moves in direction of agent orientation. 
+• ℎ𝑒𝑎𝑙𝑡ℎ ∈ {0, 1, 2, 3, … } non-negative integer representing agent health.  
+• 𝑚𝑠𝑡𝑒𝑝∈ {0, 1, 2, 3} represents the monster timestep to keep track of their locations. 
+• 𝑑1, 𝑑2, … , 𝑑𝑀 are Booleans indicating if the corresponding monster in monster_coords is dead. Initially all false. 
+The goal condition is reached when all 𝑀 monsters are dead and agent survives: 
+𝑎𝑙𝑙(𝑑1, 𝑑2, … , 𝑑𝑀) ∧ (ℎ𝑒𝑎𝑙𝑡ℎ > 0) 
+ 
+To clarify the usage of GridHunterProblem, consider the following 5-by-5 grid instance, 𝑀 = 3 : 
+ 
+The agent is (𝑟𝑜𝑤, 𝑐𝑜𝑙, 𝑓𝑜𝑟𝑤) = (1, 4, 𝑛𝑜𝑟𝑡ℎ, 10) where 10 is staring health. The monsters start at [(0, 1), (2, 2), (4, 0)].  
+We can create this GridHunterProblem as follows: 
+example_monster_coords = [(0,1), (2,2), (4,0)]  
+ 
+example_grid_problem = GridHunterProblems(initial_agent =(1,4, 'north', 10)  
+                                          N=5,  
+                                          monster_coords=example_monster_coords) 
+
+
+===== PAGE 5 =====
+
+PA1 – Moayad Alnammi © 2026   5/15 
+From the initial state above 𝑠𝑡𝑎𝑡𝑒 = (1, 4, 𝑛𝑜𝑟𝑡ℎ, 10, 0, 𝐹𝑎𝑙𝑠𝑒, 𝐹𝑎𝑙𝑠𝑒, 𝐹𝑎𝑙𝑠𝑒), let’s say the agent moves-forward, then we will 
+have the following where 𝑚𝑠𝑡𝑒𝑝= 1, so 𝑠𝑡𝑎𝑡𝑒= (0, 4, 𝑛𝑜𝑟𝑡ℎ, 10, 1, 𝐹𝑎𝑙𝑠𝑒, 𝐹𝑎𝑙𝑠𝑒, 𝐹𝑎𝑙𝑠𝑒). This corresponds to the grid 
+visualization: 
+ 
+Let’s say the agent then does turn-left, then we get 𝑚𝑠𝑡𝑒𝑝= 2, so 𝑠𝑡𝑎𝑡𝑒= (0,4, 𝑤𝑒𝑠𝑡, 10, 2, 𝐹𝑎𝑙𝑠𝑒, 𝐹𝑎𝑙𝑠𝑒, 𝐹𝑎𝑙𝑠𝑒) 
+ 
+If the agent now shoots an arrow, then next state becomes 𝑠𝑡𝑎𝑡𝑒= (0,4, 𝑤𝑒𝑠𝑡, 10, 3, 𝑇𝑟𝑢𝑒, 𝐹𝑎𝑙𝑠𝑒, 𝐹𝑎𝑙𝑠𝑒). Note that state 
+Booleans and coordinate tuples in monster_coords are in same order (use the same index).   
+
+
+===== PAGE 6 =====
+
+PA1 – Moayad Alnammi © 2026   6/15 
+Using this information, now implement the GridHunterProblem class in search_problem.py 
+ 
+Class name 
+GridHunterProblem 
+GridHunterProblem Constructor 
+Constructor arguments Constructor body 
+initial_agent_info, 
+N, 
+monster_coords 
+Add arguments to self.  
+initial_agent_info is a tuple (𝑟𝑜𝑤, 𝑐𝑜𝑙, 𝑓𝑜𝑟𝑤, ℎ𝑒𝑎𝑙𝑡ℎ) indicating the agent’s starting 
+grid location, forward orientation, and starting health.  
+Assume N is a positive integer for row and column-size of the grid problem. 
+Assume monster_coords is a list of tuples (row, col) grid locations indicating the starting 
+positions for the monsters.  
+Appropriately set the initial state as a tuple described above  
+self.initial_state = initial_agent_info + (0, False, False, …, False)  
+ 
+  
+
+===== PAGE 7 =====
+
+PA1 – Moayad Alnammi © 2026   7/15 
+GridHunterProblem Functions 
+Name Arguments Returns implementation 
+move_monsters timestep 
+Returns a new list of tuple 
+(𝑟𝑜𝑤, 𝑐𝑜𝑙) for the new 
+monster locations based on 
+timestep argument.  
+This is a helper function used inside actions() and result() 
+functions.  
+actions state 
+Returns a list of actions that 
+can be reached by state. 
+If no action is legal, then 
+return an empty list [].  
+The agent should return all five actions except in two cases: 
+- if move-forward action will result in out-of-grid bounds, 
+then remove the move-forward action.  
+- if health <= 0, then return empty list.  
+Note: Format of the list of actions I used are strings ‘move-
+forward, ‘turn-left, ‘turn-right, ‘shoot-arrow’, ‘stay’. Stick 
+to this format.  
+Also, make sure to return the list of legal actions in the 
+order move-forward, turn-left, turn-right, shoot-arrow, and 
+stay. 
+result state,  
+action 
+Returns the transition-state 
+that results from executing 
+action. 
+Do the following when implementing in this exact order: 
+• Update 𝑚𝑠𝑡𝑒𝑝. Compute next monster movements. Be 
+sure to block monsters from moving outside of grid. Use 
+this updated monster coordinates when implementing the 
+remaining below details. 
+• If action is shoot-arrow, then update monster Booleans 
+accordingly. The arrow starts in grid in front of the agent 
+and keeps moving until it hits a wall, killing any monster 
+in its path.  
+• If action move-forward, update location of agent. 
+• If action turn-left or turn-right, update agent orientation.  
+• After taking care of the above, now process the alive 
+monsters, and check if they contact the agent (occupy the 
+same grid). If yes, then apply damage to agent health. 
+
+===== PAGE 8 =====
+
+PA1 – Moayad Alnammi © 2026   8/15 
+action_cost 
+state1, 
+action,  
+state2 
+Returns the cost of transition 
+from state1 to state2 using 
+action. 
+Any action costs 1.  
+is_goal state Returns true all monsters are 
+dead and agent is alive. 
+Hint: recall that a state contains the monster dead statuses 
+and agent health. 
+h node Returns the heuristic 
+distance to the goal. 
+Implement a heuristic that computes the absolute row 
+difference between the agent and each alive monster, and 
+returns the minimum of these distances.  
+ 
+Note1: for monster coordinates, look at current node.state’s 
+mstep coordinates. Do not use (mstep+1). 
+Note2: make sure to return 0 if node is a goal-node. 
+Note3: this given heuristic can be modified further to get a 
+better one. Think on this more. However, do not submit a 
+modified heuristic for the autograder. 
+ 
+  
+
+===== PAGE 9 =====
+
+PA1 – Moayad Alnammi © 2026   9/15 
+Test your code on test_searching.py 
+ 
+Test your code on test_searching.py You can test your code by running test_searching.py. You can inspect the code and 
+add your own problem cases. Note that you will need search_algorithms.py which we worked on in class.  
+ 
+You can find a copy of it on blackboard, but you need to complete the implementation of the wrapper searches (dfs, bfs, etc.)   
+ 
+ 
+My implementation results can be found in test_searching_output.txt. Note: if your code hangs/freezes at A*, you may 
+want to check is_goal and h function implementations.   
+
+===== PAGE 10 =====
+
+PA1 – Moayad Alnammi © 2026   10/
+15 
+  
+Implementing Local-Search 
+
+===== PAGE 11 =====
+
+PA1 – Moayad Alnammi © 2026   11/
+15 
+local_search.py: Implement functions for the Subset-Sum problem 
+ 
+Consider the subset-sum problem (SSP). We will work on a variant of it. You are given a  set of non -negative integers 𝑆, and a sum 
+integer 𝑇. The goal is to find a subset 𝐵 ⊆ 𝑆 such that 𝑠𝑢𝑚(𝐵) equals to 𝑇. This problem is in NP, so no known efficient algorithm. 
+However, we can model this problem as a local search problem and use a local search algorithm to try to find a solution (or approximately 
+close solution). We’ll use simulated annealing.  
+ 
+When using a local search algorithm for this problem, the state should represent a subset that we can then sum over to check how good 
+it is. One easy to do this is to model our state as a tuple of on/off bits (0 or 1) to indicate which elements of the set 𝑆 is in the subset.  
+ 
+𝑠𝑡𝑎𝑡𝑒= (𝑒1, 𝑒2, … , 𝑒|𝑆|) 
+ 
+Where 𝑒𝑖 ∈ {0,1} indicates if 𝑖th element of 𝑆 is in the subset state.  
+ 
+As an example, consider 𝑆 = {1, 54, 22, 43, 100} and 𝑇 = 122, then one possible state is 𝑠𝑡𝑎𝑡𝑒= (0, 1, 1, 0, 1), this represents the 
+subset 𝐵 = {54, 22, 100} with 𝑠𝑢𝑚(𝐵) = 176 (side note: solution is 𝑠𝑡𝑎𝑡𝑒= (0, 0, 1, 0, 1)). 
+ 
+How should we formulate our objective function? Well, we have 𝑇 to act as a target. We want to favor subset states that are close to 𝑇 
+as possible. So, we can use the following function for a subset 𝐵: 
+𝑓(𝐵) = 𝑎𝑏𝑠(𝑇 − 𝑠𝑢𝑚(𝐵)) 
+ 
+The goal subset 𝐵 achieves 𝑓(𝐵) = 0. We favor subsets that make 𝑓(𝐵) get closer and closer to 0. So, we are doing minimization. 
+ 
+From a current state, we need to consider how to generate neighbors. One simple heuristic is to make few modifications to the current 
+state. The idea is to move a ‘little’ in the state -space to better states. How to design these few modifications is a design decision and 
+largely depends on the problem itself. Here are some options: 
+• Consider generating all possible subsets of 𝑆, this is 𝑂(2|𝑆|) which is not feasible.  
+• From current subset state, consider generating a random neighbour via small modifications. For example, we can consider 
+removing one item from the current subset state, or adding one item from 𝑆 into the current subset state. This is what we’ll do. 
+Side-note: we can also consider generating 𝐾 such random neighbours from a current subset state.  
+ 
+Before implementing simulated annealing to solve this problem, we should implement some helper functions. Note: 𝑺 is a numpy 1D 
+array of integers (numpy makes indexing easier), 𝑻 is an integer, and state is a python list with 0/1 values. 
+
+===== PAGE 12 =====
+
+PA1 – Moayad Alnammi © 2026   12/
+15 
+Name Arguments Returns Implementation hints/clarifications 
+objective_f 
+state, 
+S, 
+T 
+Returns the objective value 
+𝑓(𝐵) of state.  
+ 
+𝑆 is the numpy 1D array of 
+integers. 
+ 
+𝑇 is the target sum.  
+ 
+Construct the subset 𝐵 represented by state.  
+You can do this easily as follows: 
+ 
+B = S[[idx for idx in range(len(S)) if state[idx] == 1]] 
+ 
+Then compute 𝑓(𝐵) = 𝑎𝑏𝑠(𝑇 − 𝑠𝑢𝑚(𝐵)) 
+ 
+get_neighbor state Generates one new random 
+neighbor for state. 
+Implement this in the following exact order: 
+• Make a deep copy of state called n_state. Do not modify 
+state variable directly. Can be done as follows        
+n_state = copy.deepcopy(state) 
+• Three Cases: if no on-bits exist in state, then always add an 
+item. If no off-bit exists in state, then always remove an item. It 
+is easier to code this by having three if-elif-else statements. First 
+case is when there are both on and off bits, this case you would 
+do the u sampling described below. Second case is when there 
+are on-bits but no off-bits, this is if sum(state) == len(state), this 
+case you would remove an item. Last case is when there are off-
+bits, but no on-bits, then is if sum(state) == 0,  this case you 
+would add an item. 
+First case: 
+Sample u = np.random.uniform() 
+If u < 0.5 then uniformly at random remove an element from 
+state. This can be done as follows: 
+o Get the indices in state that have value 1.  
+
+===== PAGE 13 =====
+
+PA1 – Moayad Alnammi © 2026   13/
+15 
+o idx = np.random.choice(indices) 
+o n_state[idx] = 0 
+Else uniformly at random add an element from state. This can be 
+done as follows: 
+o Get the indices in state that have value 0.  
+o idx = np.random.choice(indices) 
+o n_state[idx] = 1 
+return n_state 
+ 
+Second case: there are on-bits but no off-bits 
+remove an item as described above. 
+ 
+Third case: there are off-bits, but no on-bits 
+add an item as described above. 
+ 
+ 
+Important Note: it is important that you random sample as described exactly. For example, only sample u if you are in the first 
+case. 
+  
+
+===== PAGE 14 =====
+
+PA1 – Moayad Alnammi © 2026   14/
+15 
+local_search.py: Implement simulated annealing  
+ 
+Your task is to implement a simulated annealing algorithm similar to what was described in slides of Local Search module.  
+ 
+Function Name: simulated_annealing 
+Arguments: initial_state, S, T, initial_temp = 1000 
+Returns: final_state, iters  
+ 
+Implementation in the following order (implement exactly in this order): 
+1. The temperature variable is set to the given argument initial_temp. 
+2. The current state is set to the given argument initial_state. 
+3. Keep track of the number of iterations of the while loop, so set iters = 0 
+4. In the main while loop (code while header as while temp >= 0: ):  
+a. The scheduler update is 𝑇𝑒𝑚𝑝= 𝑇𝑒𝑚𝑝∗ 0.9999 
+b. Add an if-check to stop looping when 𝑇𝑒𝑚𝑝< 10−14 and return the current state and number of iterations. Note you 
+can write 10−14 in python as 1e-14 
+c. Add an if-check to stop looping when objective_f(current) == 0, and return the current state and number 
+of iterations. 
+d. Generate a random successor of current using your get_neighbor implementation. 
+e. Compute deltaE = objective_f(current) – objective_f(next). 
+f. IF 𝒅𝒆𝒍𝒕𝒂𝑬 >  𝟎 set current to the successor.  
+g. ELIF 𝒅𝒆𝒍𝒕𝒂𝑬 ≤  𝟎, sample a number 𝑢 = 𝑛𝑝. 𝑟𝑎𝑛𝑑𝑜𝑚. 𝑢𝑛𝑖𝑓𝑜𝑟𝑚() and if 𝑢 ≤ 𝑒𝑑𝑒𝑡𝑙𝑎𝐸/𝑇𝑒𝑚𝑝, then set current to the 
+successor (i.e. accept the bad move).  
+h. At end of loop be sure to increment iters += 1 
+5. Outside of while loop, return current state and iteration count. 
+  
+
+===== PAGE 15 =====
+
+PA1 – Moayad Alnammi © 2026   15/
+15 
+Test your code on test_local_search.py 
+ 
+You can test your local search code by running test_local_search.py. You can inspect the code and add your own problem cases.   
+ 
+The following are my implementation results 
+ 
+I had to play around with the scheduler value until I found one that works well for these two instances (i.e. 0.9999). 
+ 
+
